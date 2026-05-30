@@ -2,18 +2,19 @@ import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { USER_SERVICE_NAME } from '@kinvue/contracts/dist/gen/constants';
 import { UserService } from './user.service';
+import { CreateProfileRequest, GetProfileRequest } from '@kinvue/contracts/dist/gen/user';
 
 @Controller()
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @GrpcMethod(USER_SERVICE_NAME, 'CreateProfile')
-  public createProfile(dto) {
+  public async createProfile(dto : CreateProfileRequest) {
     return this.userService.createProfile(dto);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
-  public getProfile(dto) {
+  public getProfile(dto: GetProfileRequest) {
     return this.userService.getProfile(dto.userId);
   }
 
