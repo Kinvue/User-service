@@ -1,0 +1,92 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model UserProfile {
+  id         String @id @default(uuid()) @db.Uuid
+  authUserId String @unique @map("auth_user_id") @db.Uuid
+
+  username    String  @unique @db.VarChar(32)
+  displayName String? @map("display_name") @db.VarChar(64)
+  avatarUrl   String? @map("avatar_url") @db.Text
+  bio         String? @db.VarChar(500)
+
+  status String @default("active") @db.VarChar(32)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  settings UserSettings?
+
+  sentFriendRequests     UserFriend[] @relation("SentFriendRequests")
+  receivedFriendRequests UserFriend[] @relation("ReceivedFriendRequests")
+
+  @@index([authUserId])
+  @@index([username])
+  @@index([status])
+  @@map("user_profiles")
+}
+
+model UserSettings {
+  id String @id @default(uuid()) @db.Uuid
+
+  userId String      @unique @map("user_id") @db.Uuid
+  user   UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  language String @default("en") @db.VarChar(5)
+  theme    Theme  @default(LIGHT)
+
+  notificationsEnabled Boolean @default(true) @map("notifications_enabled")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+model UserFriend {
+  id String @id @default(uuid()) @db.Uuid
+
+  requesterId String      @map("requester_id") @db.Uuid
+  requester   UserProfile @relation("SentFriendRequests", fields: [requesterId], references: [id], onDelete: Cascade)
+
+  receiverId String      @map("receiver_id") @db.Uuid
+  receiver   UserProfile @relation("ReceivedFriendRequests", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  status FriendStatus @default(PENDING)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([requesterId, receiverId])
+  @@index([requesterId])
+  @@index([receiverId])
+  @@index([status])
+  @@map("user_friends")
+}
+
+enum Theme {
+  LIGHT
+  DARK
+
+  @@map("theme")
+}
+
+enum FriendStatus {
+  ACCEPTED
+  DENIED
+  PENDING
+  BLOCKED
+
+  @@map("friend_status")
+}
