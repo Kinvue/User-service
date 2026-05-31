@@ -10,7 +10,7 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'CreateProfile')
   public async createProfile(dto : CreateProfileRequest) {
-    return this.userService.createProfile({...dto, authUserId:"123e4567-e89b-12d3-a456-426614174000"});
+    return this.userService.createProfile(dto);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')

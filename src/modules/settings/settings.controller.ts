@@ -1,6 +1,6 @@
 import { Controller } from '@nestjs/common';
 import { SettingsService } from './settings.service';
-import { GetSettingsRequest, UpdateProfileRequest, USER_SERVICE_NAME } from '@kinvue/contracts/dist/gen/user';
+import { GetSettingsRequest, UpdateProfileRequest, UpdateSettingsRequest, USER_SERVICE_NAME } from '@kinvue/contracts/dist/gen/user';
 import { GrpcMethod } from '@nestjs/microservices';
 
 @Controller()
@@ -13,7 +13,7 @@ export class SettingsController {
     }
 
     @GrpcMethod(USER_SERVICE_NAME, 'UpdateSettings')
-    public updateSettings(data : UpdateProfileRequest) {
+    public updateSettings(data : UpdateSettingsRequest) {
       return this.settingsService.updateSettings(data);
     }
 }
