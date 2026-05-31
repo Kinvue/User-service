@@ -2,7 +2,7 @@ import { Controller } from '@nestjs/common';
 import { GrpcMethod } from '@nestjs/microservices';
 import { USER_SERVICE_NAME } from '@kinvue/contracts/dist/gen/constants';
 import { UserService } from './user.service';
-import { CreateProfileRequest, GetProfileRequest } from '@kinvue/contracts/dist/gen/user';
+import { CreateProfileRequest, GetProfileByAuthUserIdRequest, GetProfileRequest, SearchUsersRequest, UpdateProfileRequest } from '@kinvue/contracts/dist/gen/user';
 
 @Controller()
 export class UserController {
@@ -10,7 +10,7 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'CreateProfile')
   public async createProfile(dto : CreateProfileRequest) {
-    return this.userService.createProfile(dto);
+    return this.userService.createProfile({...dto, authUserId:"123e4567-e89b-12d3-a456-426614174000"});
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
@@ -19,42 +19,18 @@ export class UserController {
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfileByAuthUserId')
-  public getProfileByAuthUserId(dto) {
+  public getProfileByAuthUserId(dto: GetProfileByAuthUserIdRequest) {
     return this.userService.getProfileByAuthUserId(dto.authUserId);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'UpdateProfile')
-  public updateProfile(dto) {
+  public updateProfile(dto : UpdateProfileRequest) {
     return this.userService.updateProfile(dto);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'SearchUsers')
-  public searchUsers(dto) {
-    return this.userService.searchUsers(dto);
+  public searchUsers(data: SearchUsersRequest) {
+    return this.userService.searchUsers(data);
   }
 
-  @GrpcMethod(USER_SERVICE_NAME, 'GetSettings')
-  public getSettings(dto) {
-    return this.userService.getSettings(dto.userId);
-  }
-
-  @GrpcMethod(USER_SERVICE_NAME, 'UpdateSettings')
-  public updateSettings(dto) {
-    return this.userService.updateSettings(dto);
-  }
-
-  @GrpcMethod(USER_SERVICE_NAME, 'SendFriendRequest')
-  public sendFriendRequest(dto) {
-    return this.userService.sendFriendRequest(dto);
-  }
-
-  @GrpcMethod(USER_SERVICE_NAME, 'RespondFriendRequest')
-  public respondFriendRequest(dto) {
-    return this.userService.respondFriendRequest(dto);
-  }
-
-  @GrpcMethod(USER_SERVICE_NAME, 'GetFriends')
-  public getFriends(dto) {
-    return this.userService.getFriends(dto);
-  }
 }
