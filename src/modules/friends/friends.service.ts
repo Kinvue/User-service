@@ -1,19 +1,23 @@
 import {
+  FriendResponse,
     GetFriendsRequest,
+  GetFriendsResponse,
   RespondFriendRequestRequest,
   SendFriendRequestRequest,
 } from '@kinvue/contracts/dist/gen/user';
 import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
-import { FriendStatus, Prisma } from 'generated/prisma/client';
+import { FriendStatus, UserFriend } from 'generated/prisma/client';
 import { FriendsRepository } from './friend.repository';
 
 @Injectable()
 export class FriendsService {
   constructor(private readonly friendsRepository: FriendsRepository) {}
 
-  public async sendFriendRequest(data: SendFriendRequestRequest) {
+  public async sendFriendRequest(
+    data: SendFriendRequestRequest,
+  ): Promise<FriendResponse> {
     if (data.requesterId === data.receiverId) {
       throw new RpcException({
         code: status.INVALID_ARGUMENT,
@@ -21,54 +25,56 @@ export class FriendsService {
       });
     }
 
-    try {
-      return await this.friendsRepository.createRequest({
-        requester: { connect: { id: data.requesterId } },
-        receiver: { connect: { id: data.receiverId } },
-        status: 'PENDING',
-      });
-    } catch (error) {
-      this.handleFriendPrismaError(error, 'Failed to send friend request');
-    }
+    const friend = await this.friendsRepository.createRequest({
+      requester: { connect: { id: data.requesterId } },
+      receiver: { connect: { id: data.receiverId } },
+      status: 'PENDING',
+    });
+
+    return this.toFriendResponse(friend);
   }
-  public async respondFriendRequest(data: RespondFriendRequestRequest) {
-    const newStatus = this.parseResponseStatus(data.status);
+ public async respondFriendRequest(
+  data: RespondFriendRequestRequest,
+): Promise<FriendResponse> {
+  const newStatus = this.parseResponseStatus(data.status);
 
-    const request = await this.friendsRepository.findById(data.friendshipId);
+  const request = await this.friendsRepository.findById(data.friendshipId);
 
-    if (!request) {
-      throw new RpcException({
-        code: status.NOT_FOUND,
-        message: 'Friend request not found',
-      });
-    }
-
-    if (request.status !== 'PENDING') {
-      throw new RpcException({
-        code: status.FAILED_PRECONDITION,
-        message: 'Friend request is already processed',
-      });
-    }
-
-    try {
-      return await this.friendsRepository.setFriendRequestStatus(
-        data.friendshipId,
-        newStatus,
-      );
-    } catch (error) {
-      this.handleFriendPrismaError(error, 'Failed to respond friend request');
-    }
-  }
-  public async getFriends(data: GetFriendsRequest) {
-    const { userId, status, limit, offset } = data;
-  
-    return this.friendsRepository.getUserFriends({
-      userId,
-      status,
-      limit,
-      offset,
+  if (!request) {
+    throw new RpcException({
+      code: status.NOT_FOUND,
+      message: 'Friend request not found',
     });
   }
+
+  if (request.status !== 'PENDING') {
+    throw new RpcException({
+      code: status.FAILED_PRECONDITION,
+      message: 'Friend request is already processed',
+    });
+  }
+
+  const friend = await this.friendsRepository.setFriendRequestStatus(
+    data.friendshipId,
+    newStatus,
+  );
+
+  return this.toFriendResponse(friend);
+}
+public async getFriends(data: GetFriendsRequest): Promise<GetFriendsResponse> {
+  const parsedStatus = data.status
+    ? this.parseResponseStatus(data.status)
+    : undefined;
+
+  const friends = await this.friendsRepository.getUserFriends({
+    ...data,
+    status: parsedStatus,
+  });
+
+  return {
+    friends: friends.map((friend) => this.toFriendResponse(friend)),
+  };
+}
 
 
 
@@ -84,30 +90,15 @@ export class FriendsService {
 
     return value as FriendStatus;
   }
-  private handleFriendPrismaError(error: unknown, fallbackMessage: string): never {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2002'
-    ) {
-      throw new RpcException({
-        code: status.ALREADY_EXISTS,
-        message: 'Friend request already sent',
-      });
-    }
 
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      throw new RpcException({
-        code: status.NOT_FOUND,
-        message: 'User or friend request not found',
-      });
-    }
-
-    throw new RpcException({
-      code: status.INTERNAL,
-      message: fallbackMessage,
-    });
-  }
+  private toFriendResponse(friend: UserFriend): FriendResponse {
+  return {
+    id: friend.id,
+    requesterId: friend.requesterId,
+    receiverId: friend.receiverId,
+    status: friend.status,
+    createdAt: friend.createdAt.toISOString(),
+    updatedAt: friend.updatedAt.toISOString(),
+  };
+}
 }

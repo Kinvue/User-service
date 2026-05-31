@@ -1,6 +1,6 @@
 import { CreateProfileRequest, SearchUsersRequest, UpdateProfileRequest, UserProfileResponse } from "@kinvue/contracts/dist/gen/user";
 import { Injectable } from "@nestjs/common";
-import { Prisma, UserProfile } from "generated/prisma/browser";
+import { Prisma, UserProfile } from "generated/prisma/client";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 
 type UpdateProfileData = Omit<UpdateProfileRequest, 'userId'>;
@@ -13,7 +13,17 @@ export class UserRepository {
     ){}
 
     public create (data : CreateProfileRequest) {
-        return this.prisma.userProfile.create({ data });
+        return this.prisma.$transaction(
+          async (tx) => {
+            const user = await tx.userProfile.create({data});
+            await tx.userSettings.create({
+              data: {
+                userId: user.id
+              }
+            })
+            return user;
+          }
+        )
     }
 
     public getOne(id : string) {
@@ -24,13 +34,12 @@ export class UserRepository {
         return this.prisma.userProfile.findUnique({where:{authUserId}});
     }
 
-    public async update(id:string, data : UpdateProfileData) : Promise<UserProfileResponse> {
-        return this.toUserProfileResponse( 
-            await this.prisma.userProfile.update({
+    public async update(id:string, data : UpdateProfileData) {
+        return await this.prisma.userProfile.update({
                 where: {id},
                 data
             })
-        );
+        
     }
 
     public search(data: SearchUsersRequest) {
@@ -63,18 +72,4 @@ export class UserRepository {
         });
     }
 
-
-    private toUserProfileResponse(profile: UserProfile): UserProfileResponse {
-      return {
-        id: profile.id,
-        authUserId: profile.authUserId,
-        username: profile.username,
-        displayName: profile.displayName ?? '',
-        avatarUrl: profile.avatarUrl ?? '',
-        bio: profile.bio ?? '',
-        status: profile.status,
-        createdAt: profile.createdAt.toISOString(),
-        updatedAt: profile.updatedAt.toISOString(),
-      };
-    }
 }

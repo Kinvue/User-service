@@ -5,7 +5,8 @@ import { Transport } from '@nestjs/microservices';
 import {USER_PROTO_PATH} from "@kinvue/contracts/dist/gen/constants"
 import { USER_V1_PACKAGE_NAME } from '@kinvue/contracts/dist/gen/user';
 import { join } from 'path';
-import { LoggerInterceptor } from './interseptors/logger.interseptor';
+import { LoggerInterceptor } from './common/interseptors/logger.interseptor';
+import { PrismaRpcExceptionFilter } from './common/filters/allErrors.filter';
 
 async function bootstrap() {
   const logger = new Logger("Main");
@@ -23,7 +24,8 @@ async function bootstrap() {
   })
   logger.log("Setup User-service completed");
 
-  app.useGlobalInterceptors(new LoggerInterceptor())
+  app.useGlobalInterceptors(new LoggerInterceptor());
+  app.useGlobalFilters(new PrismaRpcExceptionFilter());
 
   await app.listen();
   logger.log(`Service started on: ${host}:${port}`);

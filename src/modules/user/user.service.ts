@@ -3,14 +3,13 @@ import { UserRepository } from './user.repository';
 import { CreateProfileRequest, SearchUsersRequest, UpdateProfileRequest, UserProfileResponse } from '@kinvue/contracts/dist/gen/user';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
-import { Prisma } from 'generated/prisma/client';
-import { SettingsRepository } from '../settings/settings.repository';
+import { UserMapper } from 'src/common/mappers/user.mapper';
 
 @Injectable()
 export class UserService {
   public constructor(
     private readonly userRepository : UserRepository,
-    private readonly settingsRepository : SettingsRepository
+    private readonly userMapper : UserMapper
   ){}
 
   //Future REST 
@@ -24,67 +23,30 @@ export class UserService {
       })
     }
 
-    return profile;
+    return this.userMapper.toResponse(profile);
   }
   public async updateProfile(newProfileData: UpdateProfileRequest) : Promise<UserProfileResponse>{
     const { userId, ...data } = newProfileData;
 
-    try {
-      const updatedProfile = await this.userRepository.update(userId, data);
-      return updatedProfile;
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2025'
-      ) {
-        throw new RpcException({
-          code: status.NOT_FOUND,
-          message: 'Profile not found',
-        });
-      }
-
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new RpcException({
-          code: status.ALREADY_EXISTS,
-          message: 'Profile with this data already exists',
-        });
-      }
-
-      throw new RpcException({
-        code: status.INTERNAL,
-        message: 'Failed to update profile',
-      });
-    }
+    const updatedProfile = await this.userRepository.update(userId, data);
+    return this.userMapper.toResponse(updatedProfile);
   }
-  public async searchUsers(data : SearchUsersRequest) {
-    return await this.userRepository.search(data);
+  public async searchUsers(data: SearchUsersRequest) {
+    const users = await this.userRepository.search(data);
+
+    return {
+      users: users.map((user) => this.userMapper.toResponse(user)),
+    };
   }
 
   //Future gRCP
-  public async createProfile(newProfileInfo: CreateProfileRequest) {
-    try {
-      const user = await this.userRepository.create(newProfileInfo);
-      this.settingsRepository.setupSettings(user.id);
-      return user;
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new RpcException({
-          code: status.ALREADY_EXISTS,
-          message: 'Profile already exists',
-        });
-      }
+  public async createProfile(dto: CreateProfileRequest) {
+    const profile = await this.userRepository.create(dto);
 
-      throw error
-    }
+    return this.userMapper.toResponse(profile);
   }
-  public getProfileByAuthUserId(authUserId: string) {
-    const profile = this.userRepository.getOneByAuthId(authUserId);
+  public async getProfileByAuthUserId(authUserId: string) {
+    const profile = await this.userRepository.getOneByAuthId(authUserId);
 
     if(!profile){
       throw new RpcException({

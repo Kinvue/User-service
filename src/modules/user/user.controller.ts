@@ -10,27 +10,27 @@ export class UserController {
 
   @GrpcMethod(USER_SERVICE_NAME, 'CreateProfile')
   public async createProfile(dto : CreateProfileRequest) {
-    return this.userService.createProfile(dto);
+    return await this.userService.createProfile(dto);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfile')
-  public getProfile(dto: GetProfileRequest) {
-    return this.userService.getProfile(dto.userId);
+  public async getProfile(dto: GetProfileRequest) {
+    return  await this.userService.getProfile(dto.userId);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'GetProfileByAuthUserId')
-  public getProfileByAuthUserId(dto: GetProfileByAuthUserIdRequest) {
-    return this.userService.getProfileByAuthUserId(dto.authUserId);
+  public async getProfileByAuthUserId(dto: GetProfileByAuthUserIdRequest) {
+    return await  this.userService.getProfileByAuthUserId(dto.authUserId);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'UpdateProfile')
-  public updateProfile(dto : UpdateProfileRequest) {
-    return this.userService.updateProfile(dto);
+  public async updateProfile(dto : UpdateProfileRequest) {
+    return await  this.userService.updateProfile(dto);
   }
 
   @GrpcMethod(USER_SERVICE_NAME, 'SearchUsers')
-  public searchUsers(data: SearchUsersRequest) {
-    return this.userService.searchUsers(data);
+  public async searchUsers(data: SearchUsersRequest) {
+    return  await this.userService.searchUsers(data);
   }
 
 }
