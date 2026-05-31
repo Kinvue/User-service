@@ -8,8 +8,10 @@ import {
 import { Injectable } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
 import { status } from '@grpc/grpc-js';
-import { FriendStatus, UserFriend } from 'generated/prisma/client';
+import { FriendStatus } from 'generated/prisma/enums';
+
 import { FriendsRepository } from './friend.repository';
+import { UserFriend } from 'generated/prisma/client';
 
 @Injectable()
 export class FriendsService {
